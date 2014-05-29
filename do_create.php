@@ -6,6 +6,7 @@ function trim_value(&$value) {
 	$value = trim($value);
 	$value = substr($value, 0, -2);
 }
+$date = '2014-05-24';
 $txt_file = 'data';
 $subject = file_get_contents($txt_file);
 preg_match("/^.*v.resources.*\$/m", $subject, $matches);
@@ -31,27 +32,120 @@ preg_match_all('/{[^}]*}/', $html, $matches);
 foreach ($matches[0] as $key => $value) {
 	preg_match_all('/(19|20)\d\d(-)(0[1-9]|1[012])\2(0[1-9]|[12][0-9]|3[01])/', $value, $out, PREG_PATTERN_ORDER);
 	//print_r($out[0][0]);
-	//echo $value;
+	//echo '<br />';
 	preg_match('/\[\K[^[\]]++/', $value, $match);
 	$split = explode('-', $match[0]);
 	array_walk($split, 'trim_value');
 	$main_arr[$key][0] = $out[0][0];
 	$main_arr[$key][1] = $out[0][1];
-	$main_arr[$key][2] = $split[0];
+	$main_arr[$key]['time'] = $split[0];
 	$main_arr[$key][3] = $split[1];
-	$four_id = preg_match('/(?<!\d)(\d{5}|\d{6})(?!\d)/', $value, $shit);
+	$four_id = preg_match('/(?<!\d)(\d{5}|\d{6})(?!\d)/', $value, $match);
 	if (!$four_id) {
 		$main_arr[$key][4] = '001528';
-	} elseif (strlen($shit[0]) == 5) {
-		//echo 'FUCK';
-		$main_arr[$key][4] = 0 . $shit[0];
+	} elseif (strlen($match[0]) == 5) {
+		$main_arr[$key][4] = 0 . $match[0];
 	} else {
-		$main_arr[$key][4] = $shit[0];
+		$main_arr[$key][4] = $match[0];
+	}	
+	preg_match('/\](.*?)\(/', $value, $matches);  //get department for shift ie general, kitchen, bakery
+	$main_arr[$key][5] = trim($matches[1]);
+	preg_match('/Text":"(.*?)\[/', $value, $matches);  //get type of work for shift ie checker, manager, clerk
+	$main_arr[$key][6] = $matches[1];
+}
+foreach ($main_arr as $key => $value) {
+	foreach ($person_arr as $people) {
+		if ($value[4] == $people[0]) {
+			$shift_name = $people[1];
+			$main_arr[$key][7] = $shift_name;
+		}
 	}
 }
-foreach ($main_arr as $value) {
-	print_r($value[4]);
+//print_r($main_arr);
+
+foreach ($main_arr as $key => $value) {
+	//sort($value);
+	if ($value[0] == $date) {
+		if ($value[5] == 'General') {
+			if ($value[6] == 'Checker') {
+				$checkers[$key] = $value;
+				//print_r($value);
+				//echo '<br />';
+			}
+			//print_r($value[6]);
+			//echo '<br />';
+		}
+		//print_r($value);
+		
+	}
+}
+
+/*
+function time_sort($records, $field, $reverse=false) {
+	$hash = array();
+	foreach ($records as $record) {
+		$hash[$record[$field]] = $record;
+		print_r($record);
+		echo '<br />';
+	}
+	($reverse)? krsort($hash) : ksort($hash);
+	echo '<br />';
+	foreach ($hash as $value) {
+		print_r($value);
+		echo '<br />';
+	}
+	
+	$records = array();
+	foreach ($hash as $record) {
+		$records []= $record;
+	}
+	
+	return $records;
+	
+}
+*/
+
+//left off here.  trying to sort by start time.  checkout bookmark in firefox for user defined sorting. 5/28/14 4am.
+foreach ($checkers as $value) {
+	print_r($value);
 	echo '<br />';
 }
+echo '<br />';
+time_sort($checkers, 'time');
+
+
+
+
+
+
+
+
+
+//print_r($checkers);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ?>
