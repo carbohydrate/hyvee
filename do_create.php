@@ -1,12 +1,11 @@
 <?php
-//header('Content-Type: text/plain');
+header('Content-Type: text/plain');
 
-//if (!$loader = @include __DIR__ . '/vendor/autoload.php') {
-    	//die('You must set up the project dependencies, run the following commands: curl -s http://getcomposer.org/installer | php php composer.phar install');
-	//}
 include('ods.php');
-
-$date = '2014-05-23';
+/*function insertCells($ods, $sheet, $row, $cell, $value, $type) {
+	$ods->addCell($sheet, $row, $cell, $value, $type);
+}*/
+$date = '2014-05-24';
 $txt_file = 'data';
 $subject = file_get_contents($txt_file);
 preg_match("/^.*v.resources.*\$/m", $subject, $matches);
@@ -72,130 +71,79 @@ foreach ($main_arr as $key => $value) {
 		}
 	}
 }
+
 function cmp($a, $b) {
 	return strcmp($a[2], $b[2]);
 }
 usort($main_arr, 'cmp');
+$general = array();
+//print_r($main_arr);
 foreach ($main_arr as $key => $value) {
 	if ($value[0] == $date) {
 		if ($value[5] == 'General') {
-			print_r($value);
-			echo '<br />';
+			//print_r($value);
+			//echo '<br />';
 			$a = $value[6];
 			if ($a == '2Nd Asst Manager' | $a == 'Stocker') {
 				$a = 'Assistant Manager';
+				$value[6] = $a;
 			}
 			$general[$a][$key] = $value;
 		} elseif ($value[5] == 'Dairy') {
-			$dairy[$value[5]][$key] = $value;
+			$general['Dairy'][$key] = $value;
+			$general['Dairy'][$key][6] = 'Dairy';  //Dirty hack.  Should probably fix this whole loop.
 		} elseif ($value[5] == 'Frozen') {
-			$frozen[$value[5]][$key] = $value;
+			$general['Frozen'][$key] = $value;
+			$general['Frozen'][$key][6] = 'Frozen';  //Dirty hack.  Should probably fix this whole loop.
 		} elseif ($value[5] == 'Produce') {
-			$produce[$value[5]][$key] = $value;
+			$general['Produce'][$key] = $value;
+			$general['Produce'][$key][6] = 'Produce';  //Dirty hack.  Should probably fix this whole loop.
+		} elseif ($value[5] == 'General Merchandise') {
+			$general['General Merchandise'][$key] = $value;
+			$general['General Merchandise'][$key][6] = 'General Merchandise';  //Dirty hack.  Should probably fix this whole loop.
 		}
 	}
 }
+$i = 0;
+foreach ($general as $value) {
+	$x = 0;
+	foreach ($value as $new) {
+		$formatArray[$new[6]][$x] = array(0 => $new[7], 1 => date('h:i', strtotime($new[2])), 2 => date('h:i', strtotime($new[3])));
+		$x++;
+	}
+	$i++;
+}
+//print_r($general);
+//print_r($formatArray);
 $ods = new ods();
-$ods->addCell(0, 0, 0, '', 'string');
-$i = 1;
-foreach ($general['Checker'] as $value) {
-	$ods->addCell(0, $i, 0, $value[7], 'string');
-	$ods->addCell(0, $i, 1, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 2, date('h:i', strtotime($value[3])), 'string');
-	$i++;
+//addArray($sheet, $array, $start, $column, $addBlank = NULL, emptyBorderbelow)
+$ods->addArray(0, $formatArray['Checker'], 1, 1, 1, 4);
+$start = count($formatArray['Checker']) + 1 + 5;
+$ods->addArray(0, $formatArray['Courtesy Clerk'], $start, 1, 2, 4);
+$start = count($formatArray['Courtesy Clerk']) + 2 + 4 + $start;
+$ods->addArray(0, $formatArray['Assistant Manager'], $start, 1, 1, 2);
+$start = count($formatArray['Assistant Manager']) + 1 + 2 + $start;
+for ($i = 1; $i <= $start - 1; $i++) {
+	$ods->addCell(0, $i, 5, '', 'string', 0, 1, 1, 1);
 }
-if ($i < 20) {
-	for ($i; $i <= 20; $i++) {
-		$ods->addCell(0, $i, 0, '', 'string');
-		$ods->addCell(0, $i, 1, '', 'string');
-		$ods->addCell(0, $i, 2, '', 'string');
-	}
-}
-foreach ($general['Courtesy Clerk'] as $value) {
-	$ods->addCell(0, $i, 0, $value[7], 'string');
-	$ods->addCell(0, $i, 1, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 2, date('h:i', strtotime($value[3])), 'string');
-	$i++;
-}
-if ($i < 34) {
-	for ($i; $i <= 34; $i++) {
-		$ods->addCell(0, $i, 0, '', 'string');
-		$ods->addCell(0, $i, 1, '', 'string');
-		$ods->addCell(0, $i, 2, '', 'string');
-	}
-}
-foreach ($general['Assistant Manager'] as $value) {
-	$ods->addCell(0, $i, 0, $value[7], 'string');
-	$ods->addCell(0, $i, 1, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 2, date('h:i', strtotime($value[3])), 'string');
-	$i++;
-}
+$start = 0;
+$ods->addArray(0, $formatArray['Customer Service'], 1, 6, 1, 1);
+$start = count($formatArray['Customer Service']) + 1 + 2;
+$ods->addArray(0, $formatArray['Pay Station Clerk'], $start, 6, 1, 1);
+$start = count($formatArray['Pay Station Clerk']) + 1 + 1 + $start;
 
+$ods->addArray(0, $formatArray['Produce'], $start, 6, 1, 3);
+$start = count($formatArray['Produce']) + 1 + 3 + $start;
+$ods->addArray(0, $formatArray['Dairy'], $start, 6, 1, 1);
+$start = count($formatArray['Dairy']) + 1 + 1 + $start;
+$ods->addArray(0, $formatArray['Frozen'], $start, 6, 1, 2);
+$start = count($formatArray['Frozen']) + 1 + 2 + $start;
+$ods->addArray(0, $formatArray['General Merchandise'], $start, 6, 1, 2);
+$start = count($formatArray['General Merchandise']) + 1 + 2 + $start;
+$ods->addArray(0, $formatArray['Bottle Person'], $start, 6, 1, 2);
 
-$i = 1;
-foreach ($general['Customer Service'] as $value) {
-	$ods->addCell(0, $i, 3, '', 'string');
-	$ods->addCell(0, $i, 4, $value[7], 'string');
-	$ods->addCell(0, $i, 5, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 6, date('h:i', strtotime($value[3])), 'string');
-	$i++;
-}
-//$i++;
-$ods->addCell(0, $i, 3, '', 'string');
-$ods->addCell(0, $i, 4, '', 'string');
-$i++;
-foreach ($dairy['Dairy'] as $value) {
-	$ods->addCell(0, $i, 3, '', 'string');
-	$ods->addCell(0, $i, 4, $value[7], 'string');
-	$ods->addCell(0, $i, 5, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 6, date('h:i', strtotime($value[3])), 'string');
-	$i++;
-}
-$ods->addCell(0, $i, 3, '', 'string');
-$ods->addCell(0, $i, 4, '', 'string');
-$i++;
-foreach ($frozen['Frozen'] as $value) {
-	$ods->addCell(0, $i, 3, '', 'string');
-	$ods->addCell(0, $i, 4, $value[7], 'string');
-	$ods->addCell(0, $i, 5, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 6, date('h:i', strtotime($value[3])), 'string');
-	$i++;
-}
-$ods->addCell(0, $i, 3, '', 'string');
-$ods->addCell(0, $i, 4, '', 'string');
-$i++;
-$ods->addCell(0, $i, 3, '', 'string');
-$ods->addCell(0, $i, 4, '', 'string');
-$i++;
-foreach ($produce['Produce'] as $value) {
-	$ods->addCell(0, $i, 3, '', 'string');
-	$ods->addCell(0, $i, 4, $value[7], 'string');
-	$ods->addCell(0, $i, 5, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 6, date('h:i', strtotime($value[3])), 'string');
-	$i++;
-}
-$ods->addCell(0, $i, 3, '', 'string');
-$ods->addCell(0, $i, 4, '', 'string');
-$i++;
-$ods->addCell(0, $i, 3, '', 'string');
-$ods->addCell(0, $i, 4, '', 'string');
-$i++;
-foreach ($general['Product Specialist'] as $value) {
-	$ods->addCell(0, $i, 3, '', 'string');
-	$ods->addCell(0, $i, 4, $value[7], 'string');
-	$ods->addCell(0, $i, 5, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 6, date('h:i', strtotime($value[3])), 'string');
-	$i++;
-}
-$ods->addCell(0, $i, 3, '', 'string');
-$ods->addCell(0, $i, 4, '', 'string');
-$i++;
-foreach ($general['Bottle Person'] as $value) {
-	$ods->addCell(0, $i, 3, '', 'string');
-	$ods->addCell(0, $i, 4, $value[7], 'string');
-	$ods->addCell(0, $i, 5, date('h:i', strtotime($value[2])), 'string');
-	$ods->addCell(0, $i, 6, date('h:i', strtotime($value[3])), 'string');
-	$i++;
-}
-saveOds($ods, "sites/default/files/" . $date . ".ods");
+$path = 'uploads/file.ods';
+$ods->exportOds($path);
+
+//saveOds($ods, "sites/default/files/" . $date . ".ods");
 ?>
